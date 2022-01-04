@@ -13,7 +13,7 @@ from ..generic_dataset import GenericDataset
 class CrowdHuman(GenericDataset):
   num_classes = 1
   num_joints = 17
-  default_resolution = [512, 512]
+  default_resolution = [384, 640] #####################################################################
   max_objs = 128
   class_name = ['person']
   cat_ids = {1: 1}
@@ -21,7 +21,7 @@ class CrowdHuman(GenericDataset):
     super(CrowdHuman, self).__init__()
     data_dir = os.path.join(opt.data_dir, 'crowdhuman')
     img_dir = os.path.join(
-      data_dir, 'CrowdHuman_{}'.format(split), 'Images')
+      data_dir, '{}'.format(split))
     ann_path = os.path.join(data_dir, 'annotations', 
       '{}.json').format(split)
 

@@ -47,7 +47,7 @@ def demo(opt):
   print('out_name', out_name)
   if opt.save_video:
     # fourcc = cv2.VideoWriter_fourcc(*'XVID')
-    fourcc = cv2.VideoWriter_fourcc(*'H264')
+    fourcc = cv2.VideoWriter_fourcc('m','p','4','v') # *'H264'
     out = cv2.VideoWriter('../results/{}.mp4'.format(
       opt.exp_id + '_' + out_name),fourcc, opt.save_framerate, (
         opt.video_w, opt.video_h))
@@ -56,7 +56,7 @@ def demo(opt):
     detector.pause = False
   cnt = 0
   results = {}
-
+  res_file = open('/home/fatih/phd/experiments/inference/tracker/centertrack_dla34_640x384_crowdhuman_trackeveryseason/cam23_2021-08-10,12_30_45/cam23_2021-08-10,12_30_45.txt', 'a')
   while True:
       if is_video:
         _, img = cam.read()
@@ -91,6 +91,11 @@ def demo(opt):
       # results[cnt] is a list of dicts:
       #  [{'bbox': [x1, y1, x2, y2], 'tracking_id': id, 'category_id': c, ...}]
       results[cnt] = ret['results']
+      print(len(results[cnt]))
+      for line in range(len(results[cnt])):
+        res_file.write('{},{},{},{},{},{},{},-1,-1,-1\n'.format(cnt, results[cnt][line]["tracking_id"],results[cnt][line]
+        ["bbox"][0],results[cnt][line]["bbox"][1],results[cnt][line]["bbox"][2]-results[cnt][line]["bbox"][0],
+                       results[cnt][line]["bbox"][3]-results[cnt][line]["bbox"][1],results[cnt][line]["score"]))
 
       # save debug image to video
       if opt.save_video:
@@ -101,7 +106,8 @@ def demo(opt):
       # esc to quit and finish saving video
       if cv2.waitKey(1) == 27:
         save_and_exit(opt, out, results, out_name)
-        return 
+        return
+  res_file.close()
   save_and_exit(opt, out, results)
 
 
