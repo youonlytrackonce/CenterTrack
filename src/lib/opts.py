@@ -12,7 +12,7 @@ class opts(object):
     # basic experiment setting
     self.parser.add_argument('task', default='',
                              help='ctdet | ddd | multi_pose '
-                             '| tracking or combined with ,')
+                             '| tracking | reid or combined with ,')
     self.parser.add_argument('--dataset', default='crowdhuman',
                              help='see lib/dataset/dataset_facotry for ' + 
                             'available datasets')
@@ -245,6 +245,13 @@ class opts(object):
                              help='loss weight for 3d bounding box size.')
     self.parser.add_argument('--rot_weight', type=float, default=1,
                              help='loss weight for orientation.')
+    self.parser.add_argument('--id_loss', default='ce',
+                             help='reid loss: ce | focal')
+    self.parser.add_argument('--id_weight', type=float, default=1,
+                             help='loss weight for id')    
+    self.parser.add_argument('--reid_dim', type=int, default=128,
+                             help='feature dim for reid')
+    self.parser.add_argument('--multi_loss', default='uncertainty', help='multi_task loss: uncertainty | fix')    
     self.parser.add_argument('--nuscenes_att', action='store_true')
     self.parser.add_argument('--nuscenes_att_weight', type=float, default=1)
     self.parser.add_argument('--velocity', action='store_true')
@@ -342,6 +349,9 @@ class opts(object):
   
     opt.heads = {'hm': opt.num_classes, 'reg': 2, 'wh': 2}
 
+    if 'reid' in opt.task:
+      opt.heads.update({'id': opt.reid_dim})
+
     if 'tracking' in opt.task:
       opt.heads.update({'tracking': 2})
 
@@ -372,7 +382,8 @@ class opts(object):
                    'tracking': opt.tracking_weight,
                    'ltrb_amodal': opt.ltrb_amodal_weight,
                    'nuscenes_att': opt.nuscenes_att_weight,
-                   'velocity': opt.velocity_weight}
+                   'velocity': opt.velocity_weight,
+                   'id': opt.id_weight}
     opt.weights = {head: weight_dict[head] for head in opt.heads}
     for head in opt.weights:
       if opt.weights[head] == 0:

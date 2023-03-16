@@ -180,3 +180,40 @@ def generic_decode(output, K=100, opt=None):
       [pre_xs.unsqueeze(2), pre_ys.unsqueeze(2)], dim=2)
   
   return ret
+
+def mot_decode(heat, wh, reg=None, ltrb=False, K=100):
+    batch, cat, height, width = heat.size()
+
+    # heat = torch.sigmoid(heat)
+    # perform nms on heatmaps
+    heat = _nms(heat)
+
+    scores, inds, clses, ys, xs = _topk(heat, K=K)
+    if reg is not None:
+        reg = _tranpose_and_gather_feat(reg, inds)
+        reg = reg.view(batch, K, 2)
+        xs = xs.view(batch, K, 1) + reg[:, :, 0:1]
+        ys = ys.view(batch, K, 1) + reg[:, :, 1:2]
+    else:
+        xs = xs.view(batch, K, 1) + 0.5
+        ys = ys.view(batch, K, 1) + 0.5
+    wh = _tranpose_and_gather_feat(wh, inds)
+    if ltrb:
+        wh = wh.view(batch, K, 4)
+    else:
+        wh = wh.view(batch, K, 2)
+    clses = clses.view(batch, K, 1).float()
+    scores = scores.view(batch, K, 1)
+    if ltrb:
+        bboxes = torch.cat([xs - wh[..., 0:1],
+                            ys - wh[..., 1:2],
+                            xs + wh[..., 2:3],
+                            ys + wh[..., 3:4]], dim=2)
+    else:
+        bboxes = torch.cat([xs - wh[..., 0:1] / 2,
+                            ys - wh[..., 1:2] / 2,
+                            xs + wh[..., 0:1] / 2,
+                            ys + wh[..., 1:2] / 2], dim=2)
+    detections = torch.cat([bboxes, scores, clses], dim=2)
+
+    return detections, inds

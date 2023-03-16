@@ -5,7 +5,11 @@ from __future__ import print_function
 import time
 import torch
 import numpy as np
+import torch.nn as nn
 from progress.bar import Bar
+import math
+
+from fvcore.nn import sigmoid_focal_loss_jit
 
 from model.data_parallel import DataParallel
 from utils.utils import AverageMeter
@@ -13,7 +17,7 @@ from utils.utils import AverageMeter
 from model.losses import FastFocalLoss, RegWeightedL1Loss
 from model.losses import BinRotLoss, WeightedBCELoss
 from model.decode import generic_decode
-from model.utils import _sigmoid, flip_tensor, flip_lr_off, flip_lr
+from model.utils import _sigmoid, flip_tensor, flip_lr_off, flip_lr, _tranpose_and_gather_feat
 from utils.debugger import Debugger
 from utils.post_process import generic_post_process
 
@@ -27,6 +31,18 @@ class GenericLoss(torch.nn.Module):
     if 'nuscenes_att' in opt.heads:
       self.crit_nuscenes_att = WeightedBCELoss()
     self.opt = opt
+    self.emb_dim = opt.reid_dim
+    self.nID = opt.nID
+    self.classifier = nn.Linear(self.emb_dim, self.nID)
+    if opt.id_loss == 'focal':
+        torch.nn.init.normal_(self.classifier.weight, std=0.01)
+        prior_prob = 0.01
+        bias_value = -math.log((1 - prior_prob) / prior_prob)
+        torch.nn.init.constant_(self.classifier.bias, bias_value)
+    self.IDLoss = nn.CrossEntropyLoss(ignore_index=-1)
+    self.emb_scale = math.sqrt(2) * math.log(self.nID - 1)
+    self.s_det = nn.Parameter(-1.85 * torch.ones(1))
+    self.s_id = nn.Parameter(-1.05 * torch.ones(1))    
 
   def _sigmoid_output(self, output):
     if 'hm' in output:
@@ -35,6 +51,8 @@ class GenericLoss(torch.nn.Module):
       output['hm_hp'] = _sigmoid(output['hm_hp'])
     if 'dep' in output:
       output['dep'] = 1. / (output['dep'].sigmoid() + 1e-6) - 1.
+    if 'id' in output:
+      output['id'] = _sigmoid(output['id'])
     return output
 
   def forward(self, outputs, batch):
@@ -51,7 +69,7 @@ class GenericLoss(torch.nn.Module):
           batch['mask'], batch['cat']) / opt.num_stacks
       
       regression_heads = [
-        'reg', 'wh', 'tracking', 'ltrb', 'ltrb_amodal', 'hps', 
+        'reg', 'wh', 'tracking','id', 'ltrb', 'ltrb_amodal', 'hps', 
         'dep', 'dim', 'amodel_offset', 'velocity']
 
       for head in regression_heads:
@@ -78,6 +96,24 @@ class GenericLoss(torch.nn.Module):
         losses['nuscenes_att'] += self.crit_nuscenes_att(
           output['nuscenes_att'], batch['nuscenes_att_mask'],
           batch['ind'], batch['nuscenes_att']) / opt.num_stacks
+ 
+      if opt.id_weight > 0:
+          id_head = _tranpose_and_gather_feat(output['id'], batch['ind'])
+          id_head = id_head[batch['reg_mask'] > 0].contiguous()
+          id_head = self.emb_scale * F.normalize(id_head)
+          id_target = batch['ids'][batch['reg_mask'] > 0]
+
+          id_output = self.classifier(id_head).contiguous()
+          if self.opt.id_loss == 'focal':
+              id_target_one_hot = id_output.new_zeros((id_head.size(0), self.nID)).scatter_(1,
+                                                                                            id_target.long().view(
+                                                                                                -1, 1), 1)
+              id_loss += sigmoid_focal_loss_jit(id_output, id_target_one_hot,
+                                                alpha=0.25, gamma=2.0, reduction="sum"
+                                                ) / id_output.size(0)
+          else:
+              id_loss += self.IDLoss(id_output, id_target)
+          losses['id'] = id_loss
 
     losses['tot'] = 0
     for head in opt.heads:
@@ -181,7 +217,7 @@ class Trainer(object):
     return ret, results
   
   def _get_losses(self, opt):
-    loss_order = ['hm', 'wh', 'reg', 'ltrb', 'hps', 'hm_hp', \
+    loss_order = ['hm', 'wh', 'reg', 'id', 'ltrb', 'hps', 'hm_hp', \
       'hp_offset', 'dep', 'dim', 'rot', 'amodel_offset', \
       'ltrb_amodal', 'tracking', 'nuscenes_att', 'velocity']
     loss_states = ['tot'] + [k for k in loss_order if k in opt.heads]
