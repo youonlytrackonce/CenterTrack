@@ -337,7 +337,7 @@ class GenericDataset(data.Dataset):
     ret['mask'] = np.zeros((max_objs), dtype=np.float32)
 
     regression_head_dims = {
-      'reg': 2, 'wh': 2, 'tracking': 2, 'ltrb': 4, 'ltrb_amodal': 4, 
+      'reg': 2, 'wh': 2, 'tracking': 2, 'ltrb': 4, 'ltrb_amodal': 4, 'id': self.opt.reid_dim, 
       'nuscenes_att': 8, 'velocity': 3, 'hps': self.num_joints * 2, 
       'dep': 1, 'dim': 3, 'amodel_offset': 2}
 

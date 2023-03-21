@@ -5,7 +5,7 @@ import lap
 from scipy.spatial.distance import cdist
 
 from cython_bbox import bbox_overlaps as bbox_ious
-from tracking_utils import kalman_filter
+from utils import kalman_filter
 import time
 
 def merge_matches(m1, m2, shape):
@@ -134,3 +134,14 @@ def fuse_motion(kf, cost_matrix, tracks, detections, only_position=False, lambda
         cost_matrix[row, gating_distance > gating_threshold] = np.inf
         cost_matrix[row] = lambda_ * cost_matrix[row] + (1 - lambda_) * gating_distance
     return cost_matrix
+
+def greedy_assignment(dist):
+  matched_indices = []
+  if dist.shape[1] == 0:
+    return np.array(matched_indices, np.int32).reshape(-1, 2)
+  for i in range(dist.shape[0]):
+    j = dist[i].argmin()
+    if dist[i][j] < 1e16:
+      dist[:, j] = 1e18
+      matched_indices.append([i, j])
+  return np.array(matched_indices, np.int32).reshape(-1, 2)

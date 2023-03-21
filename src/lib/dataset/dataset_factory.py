@@ -12,11 +12,11 @@ from .datasets.coco import COCO
 from .datasets.kitti import KITTI
 from .datasets.coco_hp import COCOHP
 from .datasets.mot import MOT
-from .datasets.nuscenes import nuScenes
 from .datasets.crowdhuman import CrowdHuman
 from .datasets.kitti_tracking import KITTITracking
 from .datasets.custom_dataset import CustomDataset
 from .datasets.trackeveryseason import TrackEverySeason
+from .datasets.sompt22 import sompt22
 
 dataset_factory = {
   'custom': CustomDataset,
@@ -24,10 +24,10 @@ dataset_factory = {
   'kitti': KITTI,
   'coco_hp': COCOHP,
   'mot': MOT,
-  'nuscenes': nuScenes,
   'crowdhuman': CrowdHuman,
   'kitti_tracking': KITTITracking,
-  'trackeveryseason': TrackEverySeason
+  'trackeveryseason': TrackEverySeason,
+  'sompt22': sompt22
 }
 
 
