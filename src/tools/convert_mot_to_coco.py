@@ -5,12 +5,12 @@ import cv2
 
 # Use the same script for MOT16
 # DATA_PATH = '../../data/mot16/'
-DATA_PATH = '../../data/mot17/'
+DATA_PATH = '/home/fatih/phd/mot_dataset/SOMPT22/images/'
 OUT_PATH = DATA_PATH + 'annotations/'
-SPLITS = ['train_half', 'val_half', 'train', 'test']
-HALF_VIDEO = True
-CREATE_SPLITTED_ANN = True
-CREATE_SPLITTED_DET = True
+SPLITS = ['train', 'test']
+HALF_VIDEO = False
+CREATE_SPLITTED_ANN = False
+CREATE_SPLITTED_DET = False
 
 if __name__ == '__main__':
   for split in SPLITS:
@@ -24,10 +24,10 @@ if __name__ == '__main__':
     ann_cnt = 0
     video_cnt = 0
     for seq in sorted(seqs):
-      if '.DS_Store' in seq:
-        continue
-      if 'mot17' in DATA_PATH and (split != 'test' and not ('FRCNN' in seq)):
-        continue
+      #if '.DS_Store' in seq:
+      #  continue
+      #if 'mot17' in DATA_PATH and (split != 'test' and not ('FRCNN' in seq)):
+      #  continue
       video_cnt += 1
       out['videos'].append({
         'id': video_cnt,
@@ -42,10 +42,14 @@ if __name__ == '__main__':
           [num_images // 2 + 1, num_images - 1]
       else:
         image_range = [0, num_images - 1]
+      img= cv2.imread(DATA_PATH+'/' + split +'/{}/img1/000001.jpg'.format(seq))
+      height, width, c = img.shape       
       for i in range(num_images):
         if (i < image_range[0] or i > image_range[1]):
           continue
         image_info = {'file_name': '{}/img1/{:06d}.jpg'.format(seq, i + 1),
+                      'width': height,
+                      'height': width,
                       'id': image_cnt + i + 1,
                       'frame_id': i + 1 - image_range[0],
                       'prev_image_id': image_cnt + i if i > 0 else -1,
@@ -93,6 +97,7 @@ if __name__ == '__main__':
           track_id = int(anns[i][1])
           cat_id = int(anns[i][7])
           ann_cnt += 1
+          """
           if not ('15' in DATA_PATH):
             if not (float(anns[i][8]) >= 0.25):
               continue
@@ -105,12 +110,15 @@ if __name__ == '__main__':
             else:
               category_id = 1
           else:
-            category_id = 1
+          """
+          category_id = 1
           ann = {'id': ann_cnt,
                  'category_id': category_id,
                  'image_id': image_cnt + frame_id,
                  'track_id': track_id,
                  'bbox': anns[i][2:6].tolist(),
+                 'area': float(anns[i][4])*float(anns[i][5]),
+                 'iscrowd': 0,
                  'conf': float(anns[i][6])}
           out['annotations'].append(ann)
       image_cnt += num_images
