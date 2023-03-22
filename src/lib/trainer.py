@@ -69,7 +69,7 @@ class GenericLoss(torch.nn.Module):
           batch['mask'], batch['cat']) / opt.num_stacks
       
       regression_heads = [
-        'reg', 'wh', 'tracking','id', 'ltrb', 'ltrb_amodal', 'hps', 
+        'reg', 'wh', 'tracking', 'ltrb', 'ltrb_amodal', 'hps', 
         'dep', 'dim', 'amodel_offset', 'velocity']
 
       for head in regression_heads:
