@@ -9,6 +9,8 @@ import torch.nn as nn
 from progress.bar import Bar
 import math
 
+import torch.nn.functional as F
+
 from fvcore.nn import sigmoid_focal_loss_jit
 
 from model.data_parallel import DataParallel
@@ -99,7 +101,7 @@ class GenericLoss(torch.nn.Module):
  
       if opt.id_weight > 0:
           id_head = _tranpose_and_gather_feat(output['id'], batch['ind'])
-          id_head = id_head[batch['reg_mask'] > 0].contiguous()
+          #id_head = id_head[batch['reg_mask'] > 0].contiguous()
           id_head = self.emb_scale * F.normalize(id_head)
           id_target = batch['ids'][batch['reg_mask'] > 0]
 

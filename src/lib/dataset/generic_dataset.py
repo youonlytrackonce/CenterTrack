@@ -588,7 +588,8 @@ class GenericDataset(data.Dataset):
                 'pre_cts': np.array([[0, 0]], dtype=np.float32),
                 'tracking': np.array([[0, 0]], dtype=np.float32),
                 'bboxes_amodal': np.array([[0, 0]], dtype=np.float32),
-                'hps': np.zeros((1, 17, 2), dtype=np.float32),}
+                'hps': np.zeros((1, 17, 2), dtype=np.float32),
+                'embedding': np.zeros(self.opt.reid, dtype=np.float32),}
     gt_det = {k: np.array(gt_det[k], dtype=np.float32) for k in gt_det}
     return gt_det
 
