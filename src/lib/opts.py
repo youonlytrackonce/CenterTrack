@@ -403,7 +403,7 @@ class opts(object):
     default_dataset_info = {
       'ctdet': 'coco', 'multi_pose': 'coco_hp', 'ddd': 'nuscenes',
       'tracking,ctdet': 'coco', 'tracking,multi_pose': 'coco_hp', 
-      'tracking,ddd': 'nuscenes'
+      'tracking,ddd': 'nuscenes', 'tracking,reid,ctdet': 'coco'
     }
     opt = self.parse()
     from dataset.dataset_factory import dataset_factory

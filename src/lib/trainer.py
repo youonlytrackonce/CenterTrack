@@ -101,7 +101,7 @@ class GenericLoss(torch.nn.Module):
  
       if opt.id_weight > 0:
           id_head = _tranpose_and_gather_feat(output['id'], batch['ind'])
-          #id_head = id_head[batch['reg_mask'] > 0].contiguous()
+          id_head = id_head[batch['reg_mask'] > 0].contiguous()
           id_head = self.emb_scale * F.normalize(id_head)
           id_target = batch['ids'][batch['reg_mask'] > 0]
 
@@ -110,18 +110,20 @@ class GenericLoss(torch.nn.Module):
               id_target_one_hot = id_output.new_zeros((id_head.size(0), self.nID)).scatter_(1,
                                                                                             id_target.long().view(
                                                                                                 -1, 1), 1)
-              id_loss += sigmoid_focal_loss_jit(id_output, id_target_one_hot,
+              losses['id'] += sigmoid_focal_loss_jit(id_output, id_target_one_hot,
                                                 alpha=0.25, gamma=2.0, reduction="sum"
                                                 ) / id_output.size(0)
           else:
-              id_loss += self.IDLoss(id_output, id_target)
-          losses['id'] = id_loss
+              losses['id'] += self.IDLoss(id_output, id_target)
 
-    losses['tot'] = 0
-    for head in opt.heads:
-      losses['tot'] += opt.weights[head] * losses[head]
-    
-    return losses['tot'], losses
+      det_loss = opt.hm_weight * losses['hm'] + opt.wh_weight * losses['wh'] + opt.off_weight * losses['reg'] + opt.tracking_weight * losses['tracking']
+      if opt.multi_loss == 'uncertainty':
+          losses['tot'] = torch.exp(-self.s_det) * det_loss + torch.exp(-self.s_id) * losses['id'] + (self.s_det + self.s_id)
+          losses['tot'] *= 0.5
+      else:
+          losses['tot'] = det_loss + 0.1 * losses['id']
+ 
+      return losses['tot'], losses
 
 
 class ModleWithLoss(torch.nn.Module):
