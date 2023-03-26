@@ -33,10 +33,10 @@ class GenericLoss(torch.nn.Module):
     if 'nuscenes_att' in opt.heads:
       self.crit_nuscenes_att = WeightedBCELoss()
     self.opt = opt
-    self.emb_dim = opt.reid_dim
+    self.emb_dim = opt.embedding_dim
     self.nID = opt.nID
     self.classifier = nn.Linear(self.emb_dim, self.nID)
-    if opt.id_loss == 'focal':
+    if opt.embedding_loss == 'focal':
         torch.nn.init.normal_(self.classifier.weight, std=0.01)
         prior_prob = 0.01
         bias_value = -math.log((1 - prior_prob) / prior_prob)
@@ -53,8 +53,6 @@ class GenericLoss(torch.nn.Module):
       output['hm_hp'] = _sigmoid(output['hm_hp'])
     if 'dep' in output:
       output['dep'] = 1. / (output['dep'].sigmoid() + 1e-6) - 1.
-    if 'id' in output:
-      output['id'] = _sigmoid(output['id'])
     return output
 
   def forward(self, outputs, batch):
@@ -99,29 +97,30 @@ class GenericLoss(torch.nn.Module):
           output['nuscenes_att'], batch['nuscenes_att_mask'],
           batch['ind'], batch['nuscenes_att']) / opt.num_stacks
  
-      if opt.id_weight > 0:
-          id_head = _tranpose_and_gather_feat(output['id'], batch['ind'])
-          id_head = id_head[batch['reg_mask'] > 0].contiguous()
+      if opt.embedding_weight > 0 and 'embedding' in self.opt.heads:
+          id_head = _tranpose_and_gather_feat(output['embedding'], batch['ind'])
+          id_head = id_head[batch['ids_mask'] > 0].contiguous()
           id_head = self.emb_scale * F.normalize(id_head)
-          id_target = batch['ids'][batch['reg_mask'] > 0]
+          id_target = batch['ids'][batch['ids_mask'] > 0]
 
           id_output = self.classifier(id_head).contiguous()
-          if self.opt.id_loss == 'focal':
+          if self.opt.embedding_loss == 'focal':
               id_target_one_hot = id_output.new_zeros((id_head.size(0), self.nID)).scatter_(1,
                                                                                             id_target.long().view(
                                                                                                 -1, 1), 1)
-              losses['id'] += sigmoid_focal_loss_jit(id_output, id_target_one_hot,
+              losses['embedding'] += sigmoid_focal_loss_jit(id_output, id_target_one_hot,
                                                 alpha=0.25, gamma=2.0, reduction="sum"
                                                 ) / id_output.size(0)
           else:
-              losses['id'] += self.IDLoss(id_output, id_target)
+              losses['embedding'] += self.IDLoss(id_output, id_target)
 
       det_loss = opt.hm_weight * losses['hm'] + opt.wh_weight * losses['wh'] + opt.off_weight * losses['reg'] + opt.tracking_weight * losses['tracking']
-      if opt.multi_loss == 'uncertainty':
-          losses['tot'] = torch.exp(-self.s_det) * det_loss + torch.exp(-self.s_id) * losses['id'] + (self.s_det + self.s_id)
-          losses['tot'] *= 0.5
-      else:
-          losses['tot'] = det_loss + 0.1 * losses['id']
+      if 'embedding' in self.opt.heads:
+        if opt.multi_loss == 'uncertainty':
+            losses['tot'] = torch.exp(-self.s_det) * det_loss + torch.exp(-self.s_id) * losses['embedding'] + (self.s_det + self.s_id)
+            losses['tot'] *= 0.5
+        else:
+            losses['tot'] = det_loss + 0.1 * losses['embedding']
  
       return losses['tot'], losses
 
@@ -221,7 +220,7 @@ class Trainer(object):
     return ret, results
   
   def _get_losses(self, opt):
-    loss_order = ['hm', 'wh', 'reg', 'id', 'ltrb', 'hps', 'hm_hp', \
+    loss_order = ['hm', 'wh', 'reg', 'embedding', 'ltrb', 'hps', 'hm_hp', \
       'hp_offset', 'dep', 'dim', 'rot', 'amodel_offset', \
       'ltrb_amodal', 'tracking', 'nuscenes_att', 'velocity']
     loss_states = ['tot'] + [k for k in loss_order if k in opt.heads]
@@ -285,6 +284,10 @@ class Trainer(object):
             debugger.add_arrow(
               dets['cts'][i][k] * opt.down_ratio, 
               dets['tracking'][i][k] * opt.down_ratio, img_id='pre_img_pred')
+          if 'embedding' in opt.heads:
+            debugger.add_embedding_norm(
+              dets['cts'][i][k] * opt.down_ratio,
+              output['embedding'][i][k].detach().cpu().numpy(), img_id='out_pred')  
 
       # Ground truth
       debugger.add_img(img, img_id='out_gt')

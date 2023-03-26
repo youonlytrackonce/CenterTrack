@@ -9,6 +9,7 @@ import time
 import numpy as np
 import cv2
 from .ddd_utils import compute_box_3d, project_to_image, draw_box_3d
+from numpy.linalg import norm
 
 
 class Debugger(object):
@@ -182,6 +183,14 @@ class Debugger(object):
     cv2.putText(self.imgs[img_id], txt, (int(ct[0]), int(ct[1])), 
                 cv2.FONT_HERSHEY_SIMPLEX, fontsize, 
                 (255, 0, 255), thickness=1, lineType=cv2.LINE_AA)
+    
+  def add_embedding_norm(self, ct, embedding, img_id='default'):
+    l2_norm = norm(embedding)
+    txt = '{}'.format(l2_norm)
+    fontsize = 0.5
+    cv2.putText(self.imgs[img_id], txt, (int(ct[0]+5), int(ct[1]+5)), 
+                cv2.FONT_HERSHEY_SIMPLEX, fontsize, 
+                (255, 0, 127), thickness=1, lineType=cv2.LINE_AA)  
 
 
   def add_coco_hp(self, points, tracking_id=0, img_id='default'): 

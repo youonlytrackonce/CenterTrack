@@ -245,11 +245,11 @@ class opts(object):
                              help='loss weight for 3d bounding box size.')
     self.parser.add_argument('--rot_weight', type=float, default=1,
                              help='loss weight for orientation.')
-    self.parser.add_argument('--id_loss', default='ce',
+    self.parser.add_argument('--embedding_loss', default='ce',
                              help='reid loss: ce | focal')
-    self.parser.add_argument('--id_weight', type=float, default=1,
-                             help='loss weight for id')    
-    self.parser.add_argument('--reid_dim', type=int, default=128,
+    self.parser.add_argument('--embedding_weight', type=float, default=1,
+                             help='loss weight for embedding')    
+    self.parser.add_argument('--embedding_dim', type=int, default=128,
                              help='feature dim for reid')
     self.parser.add_argument('--multi_loss', default='uncertainty', help='multi_task loss: uncertainty | fix')    
     self.parser.add_argument('--nuscenes_att', action='store_true')
@@ -349,8 +349,8 @@ class opts(object):
   
     opt.heads = {'hm': opt.num_classes, 'reg': 2, 'wh': 2}
 
-    if 'reid' in opt.task:
-      opt.heads.update({'id': opt.reid_dim})
+    if 'embedding' in opt.task:
+      opt.heads.update({'embedding': opt.embedding_dim})
 
     if 'tracking' in opt.task:
       opt.heads.update({'tracking': 2})
@@ -383,7 +383,7 @@ class opts(object):
                    'ltrb_amodal': opt.ltrb_amodal_weight,
                    'nuscenes_att': opt.nuscenes_att_weight,
                    'velocity': opt.velocity_weight,
-                   'id': opt.id_weight}
+                   'embedding': opt.embedding_weight}
     opt.weights = {head: weight_dict[head] for head in opt.heads}
     for head in opt.weights:
       if opt.weights[head] == 0:
@@ -403,7 +403,7 @@ class opts(object):
     default_dataset_info = {
       'ctdet': 'coco', 'multi_pose': 'coco_hp', 'ddd': 'nuscenes',
       'tracking,ctdet': 'coco', 'tracking,multi_pose': 'coco_hp', 
-      'tracking,ddd': 'nuscenes', 'tracking,reid,ctdet': 'coco'
+      'tracking,ddd': 'nuscenes', 'tracking,embedding,ctdet': 'coco'
     }
     opt = self.parse()
     from dataset.dataset_factory import dataset_factory
