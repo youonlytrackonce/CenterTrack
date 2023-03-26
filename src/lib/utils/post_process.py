@@ -66,6 +66,9 @@ def generic_post_process(
           trans).reshape(2)
         item['tracking'] = tracking - item['ct']
 
+      if 'embedding' in dets:
+        item['embedding'] = dets['embedding']  
+
       if 'bboxes' in dets:
         bbox = transform_preds_with_trans(
           dets['bboxes'][i][j].reshape(2, 2), trans).reshape(4)

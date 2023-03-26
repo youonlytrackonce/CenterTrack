@@ -4,6 +4,8 @@ from scipy.optimize import linear_sum_assignment as linear_assignment
 from numba import jit
 import copy
 
+from tracker_fair import matching
+
 class Tracker(object):
   def __init__(self, opt):
     self.opt = opt
@@ -17,6 +19,7 @@ class Tracker(object):
         item['active'] = 1
         item['age'] = 1
         item['tracking_id'] = self.id_count
+        item['embedding'] = []
         if not ('ct' in item):
           bbox = item['bbox']
           item['ct'] = [(bbox[0] + bbox[2]) / 2, (bbox[1] + bbox[3]) / 2]
@@ -31,7 +34,7 @@ class Tracker(object):
     M = len(self.tracks)
 
     dets = np.array(
-      [det['ct'] + det['tracking'] for det in results], np.float32) # N x 2
+      [det['ct'] + det['tracking'] + det['embedding'] for det in results], np.float32) # N x 2
     track_size = np.array([((track['bbox'][2] - track['bbox'][0]) * \
       (track['bbox'][3] - track['bbox'][1])) \
       for track in self.tracks], np.float32) # M
@@ -41,7 +44,7 @@ class Tracker(object):
       for item in results], np.float32) # N
     item_cat = np.array([item['class'] for item in results], np.int32) # N
     tracks = np.array(
-      [pre_det['ct'] for pre_det in self.tracks], np.float32) # M x 2
+      [pre_det['ct'] + pre_det['embedding'] for pre_det in self.tracks], np.float32) # M x 2
     dist = (((tracks.reshape(1, -1, 2) - \
               dets.reshape(-1, 1, 2)) ** 2).sum(axis=2)) # N x M
 
@@ -53,9 +56,14 @@ class Tracker(object):
     if self.opt.hungarian:
       item_score = np.array([item['score'] for item in results], np.float32) # N
       dist[dist > 1e18] = 1e18
-      matched_indices = linear_assignment(dist)
+      matches = linear_assignment(dist)
+    elif 'embedding' in self.opt.heads:
+      dists = matching.embedding_distance(tracks, dets)
+      matches, unmatched_tracks, unmatched_dets = matching.linear_assignment(dists, thresh=0.4)
     else:
-      matched_indices = greedy_assignment(copy.deepcopy(dist))
+      matches = greedy_assignment(copy.deepcopy(dist))
+
+    """
     unmatched_dets = [d for d in range(dets.shape[0]) \
       if not (d in matched_indices[:, 0])]
     unmatched_tracks = [d for d in range(tracks.shape[0]) \
@@ -72,6 +80,7 @@ class Tracker(object):
       matches = np.array(matches).reshape(-1, 2)
     else:
       matches = matched_indices
+    """
 
     ret = []
     for m in matches:
