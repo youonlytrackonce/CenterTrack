@@ -56,7 +56,7 @@ def demo(opt):
     detector.pause = False
   cnt = 0
   results = {}
-  res_file = open('/home/fatih/phd/experiments/inference/tracker/centertrack_dla34_640x384_crowdhuman_trackeveryseason/cam23_2021-08-10,12_30_45/cam23_2021-08-10,12_30_45.txt', 'a')
+  #res_file = open('/home/fatih/phd/experiments/inference/tracker/centertrack_dla34_640x384_crowdhuman_trackeveryseason/cam23_2021-08-10,12_30_45/cam23_2021-08-10,12_30_45.txt', 'a')
   while True:
       if is_video:
         _, img = cam.read()
@@ -77,7 +77,7 @@ def demo(opt):
       if cnt < opt.skip_first:
         continue
       
-      cv2.imshow('input', img)
+      #cv2.imshow('input', img)
 
       # track or detect the image.
       ret = detector.run(img)
@@ -92,11 +92,12 @@ def demo(opt):
       #  [{'bbox': [x1, y1, x2, y2], 'tracking_id': id, 'category_id': c, ...}]
       results[cnt] = ret['results']
       print(len(results[cnt]))
+      """
       for line in range(len(results[cnt])):
         res_file.write('{},{},{},{},{},{},{},-1,-1,-1\n'.format(cnt, results[cnt][line]["tracking_id"],results[cnt][line]
         ["bbox"][0],results[cnt][line]["bbox"][1],results[cnt][line]["bbox"][2]-results[cnt][line]["bbox"][0],
                        results[cnt][line]["bbox"][3]-results[cnt][line]["bbox"][1],results[cnt][line]["score"]))
-
+      """
       # save debug image to video
       if opt.save_video:
         out.write(ret['generic'])
@@ -107,7 +108,7 @@ def demo(opt):
       if cv2.waitKey(1) == 27:
         save_and_exit(opt, out, results, out_name)
         return
-  res_file.close()
+  #res_file.close()
   save_and_exit(opt, out, results)
 
 

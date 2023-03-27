@@ -34,7 +34,7 @@ class Tracker(object):
     M = len(self.tracks)
 
     dets = np.array(
-      [det['ct'] + det['tracking'] + det['embedding'] for det in results], np.float32) # N x 2
+      [det['ct'] + det['tracking'] for det in results], np.float32) # N x 2
     track_size = np.array([((track['bbox'][2] - track['bbox'][0]) * \
       (track['bbox'][3] - track['bbox'][1])) \
       for track in self.tracks], np.float32) # M
@@ -44,9 +44,15 @@ class Tracker(object):
       for item in results], np.float32) # N
     item_cat = np.array([item['class'] for item in results], np.int32) # N
     tracks = np.array(
-      [pre_det['ct'] + pre_det['embedding'] for pre_det in self.tracks], np.float32) # M x 2
+      [pre_det['ct'] for pre_det in self.tracks], np.float32) # M x 2
     dist = (((tracks.reshape(1, -1, 2) - \
               dets.reshape(-1, 1, 2)) ** 2).sum(axis=2)) # N x M
+    
+    dets_emb = np.array(
+      [det['embedding'] for det in results], np.float32) # N x embedding_dim
+    
+    tracks_emb = np.array(
+      [pre_det['embedding'] for pre_det in self.tracks], np.float32) # M x embedding_dim
 
     invalid = ((dist > track_size.reshape(1, M)) + \
       (dist > item_size.reshape(N, 1)) + \
@@ -58,7 +64,7 @@ class Tracker(object):
       dist[dist > 1e18] = 1e18
       matches = linear_assignment(dist)
     elif 'embedding' in self.opt.heads:
-      dists = matching.embedding_distance(tracks, dets)
+      dists = matching.embedding_distance(tracks_emb, dets_emb)
       matches, unmatched_tracks, unmatched_dets = matching.linear_assignment(dists, thresh=0.4)
     else:
       matches = greedy_assignment(copy.deepcopy(dist))

@@ -152,7 +152,8 @@ class Detector(object):
     tot_time += tracking_time - start_time
 
     if self.opt.debug >= 1:
-      self.show_results(self.debugger, image, results)
+      pass
+      #self.show_results(self.debugger, image, results)
     self.cnt += 1
 
     show_results_time = time.time()

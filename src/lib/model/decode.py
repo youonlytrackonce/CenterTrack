@@ -145,7 +145,6 @@ def generic_decode(output, K=100, opt=None):
     id_feature = F.normalize(id_feature, dim=1)
     id_feature = _tranpose_and_gather_feat(id_feature, inds)
     id_feature = id_feature.squeeze(0)
-    id_feature = id_feature.cpu().numpy()
     ret['embedding'] = id_feature
 
   regression_heads = ['tracking', 'dep', 'rot', 'dim', 'amodel_offset',
