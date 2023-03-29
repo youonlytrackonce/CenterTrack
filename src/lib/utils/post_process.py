@@ -67,7 +67,7 @@ def generic_post_process(
         item['tracking'] = tracking - item['ct']
 
       if 'embedding' in dets:
-        item['embedding'] = dets['embedding']  
+        item['embedding'] = dets['embedding'][i] 
 
       if 'bboxes' in dets:
         bbox = transform_preds_with_trans(
