@@ -1,6 +1,5 @@
 import numpy as np
 from scipy.optimize import linear_sum_assignment as linear_assignment_sk
-from scipy.optimize import linear_sum_assignment as linear_assignment
 from numba import jit
 import copy
 
@@ -48,9 +47,9 @@ class Tracker(object):
     dist = (((tracks.reshape(1, -1, 2) - \
               dets.reshape(-1, 1, 2)) ** 2).sum(axis=2)) # N x M
     if 'embedding' in self.opt.heads:
-      dets_emb = np.array(
+      dets_emb = np.asarray(
         [det['embedding'] for det in results], np.float32) # N x embedding_dim   
-      tracks_emb = np.array(
+      tracks_emb = np.asarray(
         [pre_det['embedding'] for pre_det in self.tracks], np.float32) # M x embedding_dim
 
     invalid = ((dist > track_size.reshape(1, M)) + \
@@ -62,6 +61,8 @@ class Tracker(object):
       item_score = np.array([item['score'] for item in results], np.float32) # N
       dist[dist > 1e18] = 1e18
       matched_indices = linear_assignment_sk(dist)
+      matched_indices = np.asarray(matched_indices)
+      matched_indices = np.transpose(matched_indices)
     elif 'embedding' in self.opt.heads:
       dists = matching.embedding_distance(tracks_emb, dets_emb)
       matched_indices, unmatched_tracks, unmatched_dets = matching.linear_assignment(dists, thresh=0.4)
@@ -90,11 +91,12 @@ class Tracker(object):
 
     ret = []
     for m in matches:
-      track = results[m[1]]
-      track['tracking_id'] = self.tracks[m[1]]['tracking_id']
-      track['age'] = 1
-      track['active'] = self.tracks[m[1]]['active'] + 1
-      ret.append(track)
+      if m[0] < len(results) and m[1] < len(self.tracks):
+        track = results[m[0]]
+        track['tracking_id'] = self.tracks[m[1]]['tracking_id']
+        track['age'] = 1
+        track['active'] = self.tracks[m[1]]['active'] + 1
+        ret.append(track)
 
     if self.opt.public_det and len(unmatched_dets) > 0:
       # Public detection: only create tracks from provided detections

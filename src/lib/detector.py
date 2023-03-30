@@ -152,8 +152,7 @@ class Detector(object):
     tot_time += tracking_time - start_time
 
     if self.opt.debug >= 1:
-      pass
-      #self.show_results(self.debugger, image, results)
+      self.show_results(self.debugger, image, results)
     self.cnt += 1
 
     show_results_time = time.time()
@@ -306,8 +305,8 @@ class Detector(object):
     if 'dep' in output:
       output['dep'] = 1. / (output['dep'].sigmoid() + 1e-6) - 1.
       output['dep'] *= self.opt.depth_scale
-    if 'embedding' in output:
-      output['embedding'] = output['embedding'].sigmoid_()  
+    #if 'embedding' in output:
+      #output['embedding'] = output['embedding'].sigmoid_()  
     return output
 
 
