@@ -1,5 +1,5 @@
 import numpy as np
-#from sklearn.utils.linear_assignment_ import linear_assignment
+from scipy.optimize import linear_sum_assignment as linear_assignment_sk
 from scipy.optimize import linear_sum_assignment as linear_assignment
 from numba import jit
 import copy
@@ -61,12 +61,13 @@ class Tracker(object):
     if self.opt.hungarian:
       item_score = np.array([item['score'] for item in results], np.float32) # N
       dist[dist > 1e18] = 1e18
-      matched_indices = linear_assignment(dist)
+      matched_indices = linear_assignment_sk(dist)
     elif 'embedding' in self.opt.heads:
       dists = matching.embedding_distance(tracks_emb, dets_emb)
       matched_indices, unmatched_tracks, unmatched_dets = matching.linear_assignment(dists, thresh=0.4)
     else:
-      matches = greedy_assignment(copy.deepcopy(dist))
+      matched_indices = greedy_assignment(copy.deepcopy(dist))
+
 
     if 'embedding' not in self.opt.task:
       unmatched_dets = [d for d in range(dets.shape[0]) \
@@ -89,7 +90,7 @@ class Tracker(object):
 
     ret = []
     for m in matches:
-      track = results[m[0]]
+      track = results[m[1]]
       track['tracking_id'] = self.tracks[m[1]]['tracking_id']
       track['age'] = 1
       track['active'] = self.tracks[m[1]]['active'] + 1

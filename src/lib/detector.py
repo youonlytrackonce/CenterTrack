@@ -306,6 +306,8 @@ class Detector(object):
     if 'dep' in output:
       output['dep'] = 1. / (output['dep'].sigmoid() + 1e-6) - 1.
       output['dep'] *= self.opt.depth_scale
+    if 'embedding' in output:
+      output['embedding'] = output['embedding'].sigmoid_()  
     return output
 
 
